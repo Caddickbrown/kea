@@ -24,6 +24,20 @@ dotnet run --project src/Kea.Cli -- --help   # the command line version
 It needs only the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 See [docs/CROSS_PLATFORM.md](docs/CROSS_PLATFORM.md) for details, including what was replaced
 and which original bugs were fixed along the way.
+
+### Self-hosted web app
+There is also a web version you can run on a server and use from a browser, with the downloads
+kept on the server and browsable from the same page:
+
+```bash
+docker compose up -d          # then open http://localhost:8080
+# or, without Docker:
+dotnet run --project src/Kea.Web
+```
+
+With no access token set it answers only requests from the machine it runs on, so it cannot be
+exposed by accident. See [docs/WEB.md](docs/WEB.md) for tokens, reverse proxies, systemd and the
+HTTP API.
 ## How To: Use
 ![enterIntoQueue](https://user-images.githubusercontent.com/50629201/89735665-87506880-da64-11ea-8b7d-213c9d179870.gif)
 * enter all links of the comics you want to download into the uppermost text field  

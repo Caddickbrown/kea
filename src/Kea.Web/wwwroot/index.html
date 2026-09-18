@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Kea</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+  <!-- Shown only when the server has a token configured and this browser has not presented it. -->
+  <div id="login" class="login" hidden>
+    <form class="login-card" id="login-form">
+      <h1>Kea</h1>
+      <p class="muted">This server needs an access token.</p>
+      <label for="login-token">Access token</label>
+      <input type="password" id="login-token" autocomplete="current-password" required>
+      <p class="error" id="login-error" hidden></p>
+      <button type="submit" class="primary">Sign in</button>
+    </form>
+  </div>
+
+  <div id="app" hidden>
+    <header>
+      <div class="wrap header-inner">
+        <h1>Kea</h1>
+        <span class="tagline">webtoons downloader</span>
+        <span class="spacer"></span>
+        <span id="connection" class="pill" title="Live updates">connecting</span>
+        <button id="logout" class="ghost" hidden>Sign out</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <div class="wrap">
+        <button class="tab active" data-view="download">Download</button>
+        <button class="tab" data-view="jobs">Jobs <span id="jobs-badge" class="badge" hidden>0</span></button>
+        <button class="tab" data-view="library">Library</button>
+      </div>
+    </nav>
+
+    <main class="wrap">
+
+      <!-- ---------- download ---------- -->
+      <section id="view-download" class="view">
+        <form id="download-form">
+          <div class="card">
+            <h2>Comics</h2>
+            <p class="muted">
+              One chapter list link per line. Use a comic's <strong>list</strong> page, not a single
+              episode &mdash; e.g. <code>https://www.webtoons.com/en/action/a-comic/list?title_no=1234</code>
+            </p>
+            <textarea id="urls" rows="5" spellcheck="false"
+                      placeholder="https://www.webtoons.com/en/..."></textarea>
+          </div>
+
+          <div class="card">
+            <h2>Options</h2>
+            <div class="grid">
+              <div class="field">
+                <label for="format">Save chapters as</label>
+                <select id="format"></select>
+              </div>
+              <div class="field">
+                <label for="start">Start chapter</label>
+                <input type="number" id="start" min="1" value="1">
+              </div>
+              <div class="field">
+                <label for="end">End chapter</label>
+                <input type="text" id="end" value="end" placeholder="end">
+                <span class="hint">a number, or the word &ldquo;end&rdquo;</span>
+              </div>
+            </div>
+
+            <div class="checks">
+              <label><input type="checkbox" id="comic-folders" checked> a folder per comic</label>
+              <label><input type="checkbox" id="chapter-folders" checked> a folder per chapter</label>
+            </div>
+          </div>
+
+          <p class="error" id="download-error" hidden></p>
+
+          <div class="actions">
+            <button type="submit" class="primary" id="submit">Add to queue</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ---------- jobs ---------- -->
+      <section id="view-jobs" class="view" hidden>
+        <div id="jobs-empty" class="card empty">Nothing queued yet.</div>
+        <div id="jobs-list"></div>
+      </section>
+
+      <!-- ---------- library ---------- -->
+      <section id="view-library" class="view" hidden>
+        <div class="card">
+          <nav id="breadcrumbs" class="breadcrumbs"></nav>
+          <div id="library-empty" class="empty" hidden>This folder is empty.</div>
+          <table id="library-table" class="listing">
+            <thead>
+              <tr><th>Name</th><th class="right">Size</th><th class="right">Modified</th><th></th></tr>
+            </thead>
+            <tbody id="library-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="wrap muted">
+      Downloads are for personal, offline reading.
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

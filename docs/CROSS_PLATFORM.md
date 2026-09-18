@@ -14,10 +14,12 @@ before. The port lives alongside it in `src/` and has its own solution, `Kea.Cro
 | `src/Kea.Core` | All scraping, downloading and packaging logic. No UI. | Windows, macOS, Linux |
 | `src/Kea.Cli` | Console front-end (`kea`). No desktop session needed. | Windows, macOS, Linux, headless |
 | `src/Kea.Gui` | Avalonia desktop app, the GUI equivalent of the original. | Windows, macOS, Linux |
+| `src/Kea.Web` | Self-hosted web app, see [WEB.md](WEB.md). | Windows, macOS, Linux, headless |
 | `tests/Kea.Core.Tests` | xUnit tests for the logic and the output formats. | Windows, macOS, Linux |
+| `tests/Kea.Web.Tests` | xUnit tests for the web app's access control and path handling. | Windows, macOS, Linux |
 
-Both front-ends call the same `Kea.Core`. The original kept its logic inside the WinForms form,
-which is what tied it to Windows in the first place.
+All three front-ends call the same `Kea.Core`. The original kept its logic inside the WinForms
+form, which is what tied it to Windows in the first place.
 
 ## Requirements
 

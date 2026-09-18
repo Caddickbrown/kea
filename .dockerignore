@@ -1,0 +1,16 @@
+# Keep the build context small and never ship build output or downloads into an image.
+**/bin/
+**/obj/
+library/
+.git/
+.github/
+.vs/
+.idea/
+docs/
+tests/
+src/Kea.Gui/
+src/Kea.Cli/
+Kea/
+Kea.sln
+*.user
+*.md

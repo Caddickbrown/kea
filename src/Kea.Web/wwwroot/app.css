@@ -1,0 +1,232 @@
+/* Kea web UI. Carries the desktop app's green palette; no framework, no build step. */
+
+:root {
+  --ink: #001e0e;
+  --ink-soft: #354a40;
+  --surface: #ffffff;
+  --page: #b0c1b9;
+  --line: #9fb2a9;
+  --accent: #001e0e;
+  --accent-ink: #ffffff;
+  --button: #93a59d;
+  --button-hover: #a6b6af;
+  --danger: #8c2f22;
+  --ok: #1e6b3f;
+  --radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e4ede8;
+    --ink-soft: #a8bcb2;
+    --surface: #10201a;
+    --page: #08130f;
+    --line: #2a4036;
+    --accent: #1d3a2c;
+    --accent-ink: #eaf3ee;
+    --button: #2f5544;
+    --button-hover: #3b6a55;
+    --danger: #ff8e7d;
+    --ok: #6fd79b;
+  }
+}
+
+* { box-sizing: border-box; }
+
+/* The UA rule for [hidden] is only `display: none` at zero specificity, so any class below that
+   sets `display` would beat it and show an element the script had hidden. The app toggles
+   `hidden` to switch views, so make it win outright. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.wrap { width: min(960px, 100% - 32px); margin-inline: auto; }
+
+h1 { font-size: 22px; margin: 0; }
+h2 { font-size: 15px; margin: 0 0 4px; text-transform: lowercase; letter-spacing: .02em; }
+
+code { font-size: 12px; background: rgba(127, 127, 127, .18); padding: 1px 5px; border-radius: 4px; }
+.muted { color: var(--ink-soft); font-size: 13px; }
+.right { text-align: right; }
+.spacer { flex: 1; }
+
+/* ---------- header ---------- */
+
+header { background: var(--accent); color: var(--accent-ink); padding: 14px 0; }
+header h1 { color: var(--accent-ink); }
+.header-inner { display: flex; align-items: center; gap: 10px; }
+.tagline { font-size: 12px; opacity: .7; }
+
+.pill {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: .75;
+}
+.pill.live { color: #8ee6b0; opacity: 1; }
+.pill.down { color: #ffb3a7; opacity: 1; }
+
+/* ---------- tabs ---------- */
+
+.tabs { background: var(--surface); border-bottom: 1px solid var(--line); }
+.tabs .wrap { display: flex; gap: 4px; }
+
+.tab {
+  background: none;
+  border: none;
+  /* The base button rule rounds every corner, which turns the active underline into a box. */
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-soft);
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tab.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+
+.badge {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--ok);
+  color: var(--surface);
+  font-size: 11px;
+  text-align: center;
+}
+
+/* ---------- layout ---------- */
+
+main { padding: 20px 0 40px; }
+footer { padding-bottom: 28px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 12px; color: var(--ink-soft); }
+.hint { font-size: 11px; color: var(--ink-soft); }
+
+.checks { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; font-size: 14px; }
+/* Without nowrap the label's text wraps a word at a time inside the flex row. */
+.checks label { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.checks input { width: auto; flex: none; }
+
+.actions { display: flex; gap: 10px; align-items: center; }
+
+/* ---------- controls ---------- */
+
+textarea, input, select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  width: 100%;
+}
+textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  border: none;
+  padding: 9px 16px;
+  background: var(--button);
+  color: var(--ink);
+}
+button:hover:not(:disabled) { background: var(--button-hover); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+button.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+button.primary:hover:not(:disabled) { filter: brightness(1.35); }
+button.ghost { background: none; border: 1px solid currentColor; color: inherit; padding: 5px 11px; font-size: 13px; }
+button.small { padding: 5px 11px; font-size: 13px; }
+button.link { background: none; padding: 0; color: var(--ink); text-decoration: underline; }
+
+.error {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin: 0 0 14px;
+  white-space: pre-wrap;
+}
+
+.empty { color: var(--ink-soft); text-align: center; padding: 26px 0; font-size: 14px; }
+
+/* ---------- jobs ---------- */
+
+.job { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+.job-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.job-title { font-weight: 600; }
+.job-meta { font-size: 12px; color: var(--ink-soft); }
+
+.status { font-size: 11px; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em; }
+.status-queued { background: rgba(127, 127, 127, .22); }
+.status-running { background: color-mix(in srgb, var(--ok) 25%, transparent); color: var(--ok); }
+.status-completed { background: color-mix(in srgb, var(--ok) 25%, transparent); color: var(--ok); }
+.status-failed { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+.status-cancelled { background: rgba(127, 127, 127, .22); }
+
+.bar { height: 7px; background: rgba(127, 127, 127, .22); border-radius: 999px; overflow: hidden; margin: 10px 0 6px; }
+.bar > div { height: 100%; background: var(--ok); border-radius: 999px; transition: width .25s ease; }
+.job-failed .bar > div { background: var(--danger); }
+.job-cancelled .bar > div { background: rgba(127, 127, 127, .55); }
+
+.job-status-text { font-size: 13px; color: var(--ink-soft); word-break: break-word; }
+.job-actions { margin-top: 10px; display: flex; gap: 8px; }
+
+details.failures { margin-top: 10px; }
+details.failures summary { cursor: pointer; font-size: 13px; color: var(--danger); }
+details.failures ul { margin: 8px 0 0; padding-left: 20px; font-size: 12px; color: var(--ink-soft); }
+
+/* ---------- library ---------- */
+
+.breadcrumbs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; margin-bottom: 12px; }
+.breadcrumbs button { background: none; padding: 2px 4px; color: var(--ink); text-decoration: underline; }
+.breadcrumbs span { color: var(--ink-soft); }
+
+.listing { width: 100%; border-collapse: collapse; font-size: 14px; }
+.listing th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); border-bottom: 1px solid var(--line); padding: 6px 8px; }
+.listing td { padding: 8px; border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); }
+.listing tr:last-child td { border-bottom: none; }
+.listing .name { display: flex; align-items: center; gap: 8px; }
+.listing a { color: var(--ink); }
+
+/* ---------- login ---------- */
+
+.login { min-height: 100dvh; display: grid; place-items: center; padding: 20px; }
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px;
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.login-card label { font-size: 12px; color: var(--ink-soft); }
+.login-card button { margin-top: 8px; }
+
+@media (max-width: 560px) {
+  .listing th:nth-child(3), .listing td:nth-child(3) { display: none; }
+}

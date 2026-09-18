@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Kea.Web</RootNamespace>
+    <AssemblyName>Kea.Web</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Serves the UI from wwwroot; there is no JavaScript build step on purpose. -->
+    <UserSecretsId>kea-web</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Kea.Core/Kea.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kea.Web.Tests" />
+  </ItemGroup>
+
+</Project>

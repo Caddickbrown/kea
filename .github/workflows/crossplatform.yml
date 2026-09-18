@@ -45,3 +45,36 @@ jobs:
 
       - name: Check the CLI starts
         run: dotnet run --project src/Kea.Cli/Kea.Cli.csproj --configuration Release --no-build -- --help
+
+  docker:
+    name: docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build -t kea-web:ci .
+
+      - name: Check the service starts and answers
+        run: |
+          docker run -d --name kea-ci -p 8080:8080 -e KEA_ACCESSTOKEN=ci-token kea-web:ci
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1; then
+              echo "service is up"
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://127.0.0.1:8080/api/health
+
+          # With a token configured, an unauthenticated call must be refused.
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/jobs)
+          test "$code" = "401" || { echo "expected 401 without a token, got $code"; exit 1; }
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'X-Kea-Token: ci-token' http://127.0.0.1:8080/api/jobs)
+          test "$code" = "200" || { echo "expected 200 with the token, got $code"; exit 1; }
+
+          docker logs kea-ci
+          docker rm -f kea-ci

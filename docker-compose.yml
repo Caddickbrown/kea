@@ -1,0 +1,29 @@
+services:
+  kea:
+    build: .
+    image: kea-web
+    container_name: kea
+    restart: unless-stopped
+
+    # Bound to localhost by default. To reach it from another machine, either put a
+    # reverse proxy in front (recommended, so you get TLS) or change this to "8080:8080"
+    # — but set KEA_ACCESSTOKEN first, or the service will refuse remote requests.
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    environment:
+      # Generate one with:  openssl rand -base64 32
+      KEA_ACCESSTOKEN: "${KEA_ACCESSTOKEN:-}"
+      KEA_MAXCONCURRENTJOBS: "1"
+      KEA_MAXPARALLELDOWNLOADS: "3"
+
+    volumes:
+      # Where the downloads land. Point this anywhere you like.
+      - ./library:/library
+
+    # The service only ever writes to the library volume.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
