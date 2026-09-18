@@ -10,6 +10,20 @@ After the .zip folder downloaded unzip it and run Kea.exe.
 *(all files in the Kea folder need to stay in the same directory)*
 
 To edit Kea, download everything and open ***Kea.sln*** in Visual Studio.
+
+### macOS and Linux
+The original build above is Windows only. A .NET 8 port that runs on macOS, Linux and Windows
+lives in `src/`, with both a desktop app and a command line version:
+
+```bash
+dotnet build Kea.CrossPlatform.sln
+dotnet run --project src/Kea.Gui          # the desktop app
+dotnet run --project src/Kea.Cli -- --help   # the command line version
+```
+
+It needs only the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
+See [docs/CROSS_PLATFORM.md](docs/CROSS_PLATFORM.md) for details, including what was replaced
+and which original bugs were fixed along the way.
 ## How To: Use
 ![enterIntoQueue](https://user-images.githubusercontent.com/50629201/89735665-87506880-da64-11ea-8b7d-213c9d179870.gif)
 * enter all links of the comics you want to download into the uppermost text field  

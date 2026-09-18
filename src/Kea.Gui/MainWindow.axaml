@@ -1,0 +1,127 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Kea.Gui"
+        x:Class="Kea.Gui.MainWindow"
+        Title="Kea"
+        Icon="avares://Kea/Assets/KeaLogo.ico"
+        Width="620" Height="800"
+        MinWidth="520" MinHeight="480"
+        Background="#B0C1B9">
+
+  <Window.Resources>
+    <local:SaveFormatConverter x:Key="SaveFormatConverter" />
+  </Window.Resources>
+
+  <ScrollViewer>
+    <StackPanel Margin="16" Spacing="12">
+
+      <Border Background="#001E0E" CornerRadius="4" Padding="12,8">
+        <TextBlock Text="Kea" Foreground="White" FontSize="20" FontWeight="Bold" />
+      </Border>
+
+      <StackPanel Spacing="4">
+        <TextBlock Classes="heading" Text="enter URLs below" />
+        <TextBlock Foreground="#3A4A43" FontSize="11"
+                   Text="One comic list page per line, e.g. https://www.webtoons.com/en/action/a-comic/list?title_no=1234" />
+        <TextBox Text="{Binding UrlText}"
+                 AcceptsReturn="True"
+                 Height="90"
+                 IsEnabled="{Binding IsIdle}"
+                 TextWrapping="NoWrap"
+                 VerticalContentAlignment="Top" />
+        <Button Classes="kea"
+                Content="add all to queue"
+                HorizontalAlignment="Left"
+                Command="{Binding AddToQueueCommand}" />
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Classes="heading" Text="queue" />
+        <DataGrid ItemsSource="{Binding Queue}"
+                  SelectedItem="{Binding SelectedEntry}"
+                  IsEnabled="{Binding IsIdle}"
+                  Height="160"
+                  GridLinesVisibility="Horizontal"
+                  CanUserReorderColumns="False"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="False"
+                  AutoGenerateColumns="False"
+                  Background="White">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="comic" Binding="{Binding Name}" IsReadOnly="True" Width="*" />
+            <DataGridTextColumn Header="start" Binding="{Binding Start}" Width="90" />
+            <DataGridTextColumn Header="end" Binding="{Binding End}" Width="90" />
+          </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="kea" Content="remove selected" Command="{Binding RemoveSelectedCommand}" />
+          <Button Classes="kea" Content="remove all" Command="{Binding RemoveAllCommand}" />
+        </StackPanel>
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Classes="heading" Text="options" />
+
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0"
+                   Text="{Binding SavePath}"
+                   Watermark="please select a directory for saving"
+                   IsEnabled="{Binding IsIdle}" />
+          <Button Grid.Column="1"
+                  Classes="kea"
+                  Content="folder"
+                  Margin="8,0,0,0"
+                  Click="OnSelectFolder"
+                  IsEnabled="{Binding IsIdle}" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="save chapters as:" VerticalAlignment="Center" Foreground="#001E0E" />
+          <ComboBox ItemsSource="{Binding Formats}"
+                    SelectedItem="{Binding SelectedFormat}"
+                    IsEnabled="{Binding IsIdle}"
+                    MinWidth="260">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Converter={StaticResource SaveFormatConverter}}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="16">
+          <TextBlock Text="use sub-folders for:" VerticalAlignment="Center" Foreground="#001E0E" />
+          <CheckBox Content="each cartoon"
+                    IsChecked="{Binding CartoonFolders}"
+                    IsEnabled="{Binding IsIdle}" />
+          <CheckBox Content="each chapter"
+                    IsChecked="{Binding ChapterFolders}"
+                    IsEnabled="{Binding ChapterFoldersEnabled}"
+                    ToolTip.Tip="Only applies when saving as separate images." />
+        </StackPanel>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Classes="heading" Text="currently processing:" />
+        <TextBox Text="{Binding Status}" IsReadOnly="True" Background="White" />
+        <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" Height="14" />
+      </StackPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Classes="kea"
+                Content="start"
+                Width="120"
+                Click="OnStart"
+                IsEnabled="{Binding IsIdle}" />
+        <Button Classes="kea"
+                Content="cancel"
+                Width="120"
+                Command="{Binding CancelCommand}" />
+        <Button Classes="kea"
+                Content="help, how do I use this ?"
+                Click="OnHelp" />
+      </StackPanel>
+
+    </StackPanel>
+  </ScrollViewer>
+</Window>

@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Kea.Gui.MessageDialog"
+        Title="Kea"
+        Width="460"
+        SizeToContent="Height"
+        MaxHeight="520"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="#B0C1B9">
+
+  <StackPanel Margin="20" Spacing="14">
+    <TextBlock x:Name="TitleText"
+               FontWeight="SemiBold"
+               FontSize="15"
+               Foreground="#001E0E"
+               TextWrapping="Wrap" />
+    <ScrollViewer MaxHeight="340">
+      <TextBlock x:Name="MessageText"
+                 Foreground="#20302A"
+                 TextWrapping="Wrap" />
+    </ScrollViewer>
+    <Button Classes="kea"
+            Content="OK"
+            Width="90"
+            IsDefault="True"
+            IsCancel="True"
+            HorizontalAlignment="Right"
+            Click="OnOk" />
+  </StackPanel>
+</Window>

@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DF7BE36F-77ED-4263-9581-9F7F02D2EA1D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kea.Core", "src\Kea.Core\Kea.Core.csproj", "{0F1A96D8-F04F-4224-B46B-510D879051F7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kea.Cli", "src\Kea.Cli\Kea.Cli.csproj", "{3BD111E0-9D98-413F-B9F9-68B5D6CD62B9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kea.Gui", "src\Kea.Gui\Kea.Gui.csproj", "{3D791C8E-DA1B-40F3-ADD3-3114BA198EF5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{4EAE0704-3A69-4B3B-A7A5-2FF18B09797D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kea.Core.Tests", "tests\Kea.Core.Tests\Kea.Core.Tests.csproj", "{20D2D35B-A156-40A3-B8E1-8E2907E0C27B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0F1A96D8-F04F-4224-B46B-510D879051F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F1A96D8-F04F-4224-B46B-510D879051F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F1A96D8-F04F-4224-B46B-510D879051F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F1A96D8-F04F-4224-B46B-510D879051F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BD111E0-9D98-413F-B9F9-68B5D6CD62B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BD111E0-9D98-413F-B9F9-68B5D6CD62B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BD111E0-9D98-413F-B9F9-68B5D6CD62B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BD111E0-9D98-413F-B9F9-68B5D6CD62B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D791C8E-DA1B-40F3-ADD3-3114BA198EF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D791C8E-DA1B-40F3-ADD3-3114BA198EF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D791C8E-DA1B-40F3-ADD3-3114BA198EF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D791C8E-DA1B-40F3-ADD3-3114BA198EF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20D2D35B-A156-40A3-B8E1-8E2907E0C27B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20D2D35B-A156-40A3-B8E1-8E2907E0C27B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20D2D35B-A156-40A3-B8E1-8E2907E0C27B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20D2D35B-A156-40A3-B8E1-8E2907E0C27B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0F1A96D8-F04F-4224-B46B-510D879051F7} = {DF7BE36F-77ED-4263-9581-9F7F02D2EA1D}
+		{3BD111E0-9D98-413F-B9F9-68B5D6CD62B9} = {DF7BE36F-77ED-4263-9581-9F7F02D2EA1D}
+		{3D791C8E-DA1B-40F3-ADD3-3114BA198EF5} = {DF7BE36F-77ED-4263-9581-9F7F02D2EA1D}
+		{20D2D35B-A156-40A3-B8E1-8E2907E0C27B} = {4EAE0704-3A69-4B3B-A7A5-2FF18B09797D}
+	EndGlobalSection
+EndGlobal

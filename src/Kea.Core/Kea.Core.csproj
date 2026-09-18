@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Kea.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- HTML parsing, same library as the original Windows build. -->
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.61" />
+    <!-- Replaces System.Drawing, which is Windows-only from .NET 6 onwards.
+         Pinned to the 2.1.x line because it is Apache-2.0, matching this repo's MIT licence. -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Kea.Core.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,35 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Kea.Gui.App"
+             RequestedThemeVariant="Light">
+
+  <Application.Styles>
+    <FluentTheme />
+    <!-- The DataGrid ships its own theme, which has to be pulled in explicitly. -->
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+
+    <Style Selector="Button.kea">
+      <Setter Property="Background" Value="#93A59D" />
+      <Setter Property="Foreground" Value="#001E0E" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Padding" Value="12,6" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.kea:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#A6B6AF" />
+      <Setter Property="TextElement.Foreground" Value="#001E0E" />
+    </Style>
+    <Style Selector="Button.kea:disabled /template/ ContentPresenter">
+      <Setter Property="Background" Value="#B9C5BF" />
+      <Setter Property="TextElement.Foreground" Value="#5A6B63" />
+    </Style>
+
+    <Style Selector="TextBlock.heading">
+      <Setter Property="Foreground" Value="#001E0E" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+  </Application.Styles>
+
+</Application>
