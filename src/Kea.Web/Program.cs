@@ -39,7 +39,6 @@ builder.Services.AddSingleton<JobQueue>();
 builder.Services.AddSingleton<LibraryService>();
 builder.Services.AddSingleton<AccessControl>();
 builder.Services.AddHostedService<JobRunner>();
-builder.Services.AddHostedService<RecheckScheduler>();
 
 WebApplication app = builder.Build();
 
@@ -246,109 +245,6 @@ app.MapDelete("/api/library", (string? path) =>
         ? Results.Ok(new { ok = true })
         : Results.BadRequest(new { error = "Could not delete that." }));
 
-app.MapPost("/api/library/schedule", (string? path, ScheduleRequest? body, JobQueue queue) =>
-{
-    if (body is null) return Results.BadRequest(new { error = "Empty request." });
-    if (!library.TryReadMeta(path, out Kea.Web.Library.KeaMeta? meta))
-        return Results.BadRequest(new { error = "No recheck data found for that folder." });
-
-    int days = body.IntervalDays;
-    if (days != 0 && days != 7 && days != 30)
-        return Results.BadRequest(new { error = "intervalDays must be 0 (off), 7 (weekly) or 30 (monthly)." });
-
-    meta.RecheckIntervalDays = days;
-    // Reset LastCheckedAt so the next sweep doesn't immediately think it's overdue.
-    meta.LastCheckedAt = days == 0 ? null : DateTimeOffset.UtcNow;
-
-    return library.WriteMetaFile(path, meta)
-        ? Results.Ok(new { ok = true, recheckIntervalDays = days })
-        : Results.BadRequest(new { error = "Could not save schedule." });
-});
-
-app.MapPost("/api/library/merge", (string? path, string? format, JobQueue queue) =>
-{
-    if (!library.TryReadMeta(path, out Kea.Web.Library.KeaMeta? meta))
-        return Results.BadRequest(new { error = "No download data found for that folder." });
-
-    string fmt = format switch { "merged-pdf" => "merged-pdf", _ => "merged-cbz" };
-
-    try
-    {
-        JobView view = queue.Submit(new Kea.Web.Jobs.JobRequest
-        {
-            Urls = [meta.Url],
-            Format = fmt,
-            Start = 1,
-            End = null,
-            ComicFolders = meta.ComicFolders,
-            ChapterFolders = false,
-        });
-        return Results.Ok(view);
-    }
-    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
-    catch (InvalidOperationException ex) { return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status503ServiceUnavailable); }
-});
-
-app.MapPost("/api/library/repack", async (string? path, string? format, HttpContext context) =>
-{
-    // Repack existing CBZ files in the folder into a single merged file — no network needed.
-    if (!library.TryResolve(path, out string? fullPath) || !Directory.Exists(fullPath))
-        return Results.NotFound(new { error = "Folder not found." });
-
-    bool pdf = string.Equals(format, "pdf", StringComparison.OrdinalIgnoreCase);
-    string ext = pdf ? ".pdf" : ".cbz";
-    string contentType = pdf ? "application/pdf" : "application/vnd.comicbook+zip";
-
-    List<string> cbzFiles = Directory
-        .EnumerateFiles(fullPath, "*.cbz")
-        .OrderBy(f => Path.GetFileName(f), Kea.Web.Library.LibraryService.NaturalFileComparer.Instance)
-        .ToList();
-
-    if (cbzFiles.Count == 0)
-        return Results.BadRequest(new { error = "No CBZ files found in this folder." });
-
-    string folderName = Path.GetFileName(fullPath.TrimEnd(Path.DirectorySeparatorChar));
-    string outputName = folderName + ext;
-
-    context.Response.ContentType = contentType;
-    context.Response.Headers.ContentDisposition = $"attachment; filename=\"{outputName}\"";
-
-    if (pdf)
-        await Kea.Core.ChapterPackager.MergeCbzFilesToPdfAsync(cbzFiles, context.Response.Body, context.RequestAborted);
-    else
-        await Kea.Core.ChapterPackager.MergeCbzFilesStreamAsync(cbzFiles, context.Response.Body, context.RequestAborted);
-
-    return Results.Empty;
-});
-
-app.MapPost("/api/library/recheck", (string? path, JobQueue queue) =>
-{
-    if (!library.TryReadMeta(path, out Kea.Web.Library.KeaMeta? meta))
-        return Results.BadRequest(new { error = "No recheck data found for that folder." });
-
-    try
-    {
-        JobView view = queue.Submit(new Kea.Web.Jobs.JobRequest
-        {
-            Urls = [meta.Url],
-            Format = meta.Format,
-            Start = meta.LastChapter + 1,
-            End = null,
-            ComicFolders = meta.ComicFolders,
-            ChapterFolders = meta.ChapterFolders,
-        });
-        return Results.Ok(view);
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status503ServiceUnavailable);
-    }
-});
-
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();
@@ -376,7 +272,6 @@ static void LogStartupPosture(ILogger logger, KeaOptions options, AccessControl 
 }
 
 internal sealed record LoginRequest(string Token);
-internal sealed record ScheduleRequest(int IntervalDays);
 
 /// <summary>Exposed so the test project can spin the app up in-process.</summary>
 public partial class Program;
