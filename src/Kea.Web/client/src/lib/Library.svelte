@@ -39,6 +39,24 @@
     return items.sort((a, b) => (b.isDirectory - a.isDirectory) || (sort === 'new' ? byNew(a, b) : byName(a, b)));
   });
 
+  const cbzCount = $derived((listing?.entries ?? []).filter((e) =>
+    !e.isDirectory && /\.cbz$/i.test(e.name) && e.name.toLowerCase() !== `${listing.breadcrumbs.at(-1)?.name}.cbz`.toLowerCase()).length);
+  const intervals = [[0, 'Never'], [1, 'Every day'], [7, 'Every week'], [30, 'Every month']];
+
+  async function recheck() {
+    try {
+      await api(`/api/library/recheck?path=${encodeURIComponent(listing.path)}`, { method: 'POST' });
+      notify('Looking for new chapters. It is in the queue.');
+    } catch (e) { notify(e.message, 'error'); }
+  }
+
+  async function schedule(days) {
+    try {
+      await api(`/api/library/schedule?path=${encodeURIComponent(listing.path)}`, { method: 'POST', body: JSON.stringify({ intervalDays: Number(days) }) });
+      listing.recheckIntervalDays = Number(days);
+    } catch (e) { notify(e.message, 'error'); }
+  }
+
   const extension = (name) => (name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : '');
   const info = (entry) => [
     entry.isDirectory ? '' : extension(entry.name),
@@ -82,6 +100,30 @@
         <button class="btn quiet" aria-pressed={sort === 'new'} onclick={() => (sort = 'new')}>Newest</button>
       </div>
     </div>
+
+    {#if cbzCount > 1 || listing.canRecheck}
+      <section class="book" aria-label="This comic">
+        {#if cbzCount > 1}
+          <div>
+            <h2>Make it one book</h2>
+            <p class="muted">Joins the {cbzCount} chapters here into a single file, in order. Nothing is downloaded again.</p>
+          </div>
+          <!-- A form post lets the browser stream a big file straight to disk instead of holding it in memory. -->
+          <form method="post" action={`/api/library/repack?path=${encodeURIComponent(listing.path)}&format=cbz`}><button class="btn" type="submit">One CBZ</button></form>
+          <form method="post" action={`/api/library/repack?path=${encodeURIComponent(listing.path)}&format=pdf`}><button class="btn" type="submit">One PDF</button></form>
+        {/if}
+        {#if listing.canRecheck}
+          <div class="upd">
+            <button class="btn" onclick={recheck}>Check for new chapters</button>
+            <label>Check automatically
+              <select class="field" value={listing.recheckIntervalDays} onchange={(e) => schedule(e.currentTarget.value)}>
+                {#each intervals as [v, l]}<option value={v}>{l}</option>{/each}
+              </select>
+            </label>
+          </div>
+        {/if}
+      </section>
+    {/if}
 
     {#if entries.length === 0}
       <p class="empty muted">
@@ -148,6 +190,13 @@
   .acts :global(a.btn) { text-decoration: none; }
 
   .empty { padding: var(--s-5) 0; }
+
+  .book { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3) var(--s-4); padding: var(--s-3) 0; border-bottom: 1px solid var(--line); }
+  .book h2 { font-size: 1.0625rem; font-weight: 700; }
+  .book > div:first-child { flex: 1 1 16rem; }
+  .upd { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); flex-basis: 100%; }
+  .upd label { display: flex; align-items: center; gap: var(--s-2); color: var(--muted); }
+  .upd .field { width: auto; }
 
   @media (min-width: 40rem) {
     .row { grid-template-columns: 1fr auto auto; grid-template-areas: 'name info acts'; }

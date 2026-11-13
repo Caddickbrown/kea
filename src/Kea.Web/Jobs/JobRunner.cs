@@ -1,4 +1,5 @@
 using Kea.Core;
+using Kea.Web.Library;
 using Microsoft.Extensions.Options;
 
 namespace Kea.Web.Jobs;
@@ -99,6 +100,9 @@ public sealed class JobRunner : BackgroundService
                 .ConfigureAwait(false);
 
             record.Complete(report);
+
+            // Write recheck metadata so the library UI knows how to queue an update later.
+            await WriteMetaAsync(record, report).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (record.Cancellation.IsCancellationRequested)
         {
@@ -118,6 +122,43 @@ public sealed class JobRunner : BackgroundService
         finally
         {
             _queue.Publish("updated", record);
+        }
+    }
+
+    private static async Task WriteMetaAsync(JobRecord record, DownloadReport report)
+    {
+        foreach (ToonJob job in record.Jobs)
+        {
+            // Only write meta when the comic has its own folder; otherwise there's no obvious
+            // place to put the file and we can't figure out which folder is "this comic's".
+            if (!record.Options.CartoonFolders) continue;
+
+            // Find the highest chapter number that actually landed on disk.
+            int lastChapter = report.Chapters
+                .Where(c => c.Comic == job.Name && c.Error is null)
+                .Select(c => c.ChapterNumber)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            if (lastChapter == 0) continue;
+
+            string comicDir = Path.Combine(record.Options.SavePath, Kea.Core.FileNaming.Sanitize(job.Name, "comic"));
+            if (!Directory.Exists(comicDir)) continue;
+
+            KeaMeta meta = new()
+            {
+                Url = job.Url.ToString(),
+                Format = record.Format.CliName(),
+                ComicFolders = record.Options.CartoonFolders,
+                ChapterFolders = record.Options.ChapterFolders,
+                LastChapter = lastChapter,
+            };
+
+            string metaPath = Path.Combine(comicDir, ".kea-meta.json");
+            await File.WriteAllTextAsync(metaPath,
+                System.Text.Json.JsonSerializer.Serialize(meta,
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true }))
+                .ConfigureAwait(false);
         }
     }
 }

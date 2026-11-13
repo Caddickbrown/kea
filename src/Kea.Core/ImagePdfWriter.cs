@@ -50,6 +50,23 @@ public static class ImagePdfWriter
         WritePdf(pages, output);
     }
 
+    /// <summary>Writes a PDF directly from in-memory image bytes, skipping disk reads.</summary>
+    public static async Task WriteFromBytesAsync(
+        IReadOnlyList<byte[]> imageBytes,
+        Stream output,
+        CancellationToken cancellationToken = default)
+    {
+        List<(byte[] Data, JpegInfo Info)> pages = [];
+        foreach (byte[] bytes in imageBytes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            pages.Add(PrepareForEmbedding(bytes));
+        }
+
+        WritePdf(pages, output);
+        await Task.CompletedTask.ConfigureAwait(false); // keep async signature consistent
+    }
+
     /// <summary>
     /// Returns JPEG bytes that the DCTDecode filter can take as-is, re-encoding only when needed.
     /// </summary>

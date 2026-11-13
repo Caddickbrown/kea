@@ -14,6 +14,12 @@ public enum SaveFormat
 
     /// <summary>All images of a chapter stitched vertically into one tall PNG.</summary>
     OneImage,
+
+    /// <summary>All chapters merged into a single CBZ file.</summary>
+    MergedCbz,
+
+    /// <summary>All chapters merged into a single PDF file.</summary>
+    MergedPdf,
 }
 
 public static class SaveFormats
@@ -25,6 +31,8 @@ public static class SaveFormats
         SaveFormat.Cbz => "CBZ file",
         SaveFormat.MultipleImages => "multiple images",
         SaveFormat.OneImage => "one image (may be lower in quality)",
+        SaveFormat.MergedCbz => "merged CBZ (whole comic)",
+        SaveFormat.MergedPdf => "merged PDF (whole comic)",
         _ => throw new ArgumentOutOfRangeException(nameof(format), format, null),
     };
 
@@ -35,6 +43,8 @@ public static class SaveFormats
         SaveFormat.Cbz => "cbz",
         SaveFormat.MultipleImages => "images",
         SaveFormat.OneImage => "one-image",
+        SaveFormat.MergedCbz => "merged-cbz",
+        SaveFormat.MergedPdf => "merged-pdf",
         _ => throw new ArgumentOutOfRangeException(nameof(format), format, null),
     };
 

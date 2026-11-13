@@ -72,6 +72,15 @@ public sealed class KeaDownloader
             }
         }
 
+        // Merged formats collect every image first, then write a single output file.
+        bool isMerged = options.Format is SaveFormat.MergedCbz or SaveFormat.MergedPdf;
+        if (isMerged)
+        {
+            await DownloadMergedAsync(resolved, options, results, progress, cancellationToken).ConfigureAwait(false);
+            progress?.Report(new DownloadProgress("done!", 1));
+            return new DownloadReport(results);
+        }
+
         int totalChapters = resolved.Sum(r =>
         {
             (int start, int end) = r.Job.ResolveRange(r.Chapters.Count);
@@ -124,6 +133,106 @@ public sealed class KeaDownloader
 
         progress?.Report(new DownloadProgress("done!", 1));
         return new DownloadReport(results);
+    }
+
+    private async Task DownloadMergedAsync(
+        List<(ToonJob Job, IReadOnlyList<ChapterRef> Chapters)> resolved,
+        DownloadOptions options,
+        List<ChapterResult> results,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        int totalChapters = resolved.Sum(r =>
+        {
+            (int s, int e) = r.Job.ResolveRange(r.Chapters.Count);
+            return e - s;
+        });
+        int completedChapters = 0;
+
+        foreach ((ToonJob job, IReadOnlyList<ChapterRef> chapters) in resolved)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            string comicName = FileNaming.Sanitize(job.Name, "comic");
+            string comicDirectory = options.CartoonFolders
+                ? Path.Combine(options.SavePath, comicName)
+                : options.SavePath;
+            Directory.CreateDirectory(comicDirectory);
+
+            // Scratch folder to hold all images before packaging.
+            string scratchDir = Path.Combine(comicDirectory, "_merged_scratch");
+            Directory.CreateDirectory(scratchDir);
+
+            List<string> allFiles = [];
+            (int start, int end) = job.ResolveRange(chapters.Count);
+
+            try
+            {
+                for (int i = start; i < end; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    ChapterRef chapter = chapters[i];
+                    int chapterNumber = i + 1;
+                    double chapterBase = totalChapters == 0 ? 0 : (double)completedChapters / totalChapters;
+                    double chapterSpan = totalChapters == 0 ? 0 : 1.0 / totalChapters;
+
+                    // Download into a per-chapter sub-folder so filenames stay unique.
+                    string chapterScratch = Path.Combine(scratchDir, $"{chapterNumber:D5}");
+                    Directory.CreateDirectory(chapterScratch);
+
+                    try
+                    {
+                        string[] files = await DownloadImagesAsync(
+                            await _scraper.GetChapterImagesAsync(chapter, cancellationToken).ConfigureAwait(false),
+                            chapter, chapterScratch, comicName, chapterNumber, job.Name, options,
+                            progress, chapterBase, chapterSpan, cancellationToken).ConfigureAwait(false);
+
+                        allFiles.AddRange(files);
+                        results.Add(new ChapterResult(job.Name, chapterNumber, chapter.Name, null, null));
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        results.Add(new ChapterResult(job.Name, chapterNumber, chapter.Name, null, ex.Message));
+                        if (!ContinueOnError) throw;
+                    }
+
+                    completedChapters++;
+                    progress?.Report(new DownloadProgress(
+                        $"downloaded chapter {chapterNumber} of \"{job.Name}\"",
+                        totalChapters == 0 ? null : (double)completedChapters / totalChapters));
+                }
+
+                if (allFiles.Count == 0) continue;
+
+                // Package everything into one file.
+                string label = FileNaming.Sanitize(job.Name, "comic");
+                if (options.Format == SaveFormat.MergedCbz)
+                {
+                    string output = FileNaming.EnsureUnique(Path.Combine(comicDirectory, label + ".cbz"));
+                    progress?.Report(new DownloadProgress($"writing {Path.GetFileName(output)}", (double)completedChapters / Math.Max(totalChapters, 1)));
+                    ChapterPackager.WriteCbz(allFiles, output);
+                    // Update chapter results with the output path.
+                    for (int r = 0; r < results.Count; r++)
+                        if (results[r].Comic == job.Name && results[r].Error is null)
+                            results[r] = results[r] with { OutputPath = output };
+                }
+                else // MergedPdf
+                {
+                    string output = FileNaming.EnsureUnique(Path.Combine(comicDirectory, label + ".pdf"));
+                    progress?.Report(new DownloadProgress($"writing {Path.GetFileName(output)}", (double)completedChapters / Math.Max(totalChapters, 1)));
+                    await ImagePdfWriter.WriteAsync(allFiles, output, cancellationToken).ConfigureAwait(false);
+                    for (int r = 0; r < results.Count; r++)
+                        if (results[r].Comic == job.Name && results[r].Error is null)
+                            results[r] = results[r] with { OutputPath = output };
+                }
+            }
+            finally
+            {
+                if (Directory.Exists(scratchDir))
+                    Directory.Delete(scratchDir, recursive: true);
+            }
+        }
     }
 
     private async Task<string?> DownloadChapterAsync(

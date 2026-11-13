@@ -1,4 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 
 namespace Kea.Web.Library;
@@ -7,7 +9,7 @@ namespace Kea.Web.Library;
 public sealed record LibraryEntry(string Name, string Path, bool IsDirectory, long Size, DateTimeOffset Modified);
 
 /// <summary>The contents of one folder, with a trail back to the root.</summary>
-public sealed record LibraryListing(string Path, IReadOnlyList<LibraryEntry> Entries, IReadOnlyList<LibraryEntry> Breadcrumbs);
+public sealed record LibraryListing(string Path, IReadOnlyList<LibraryEntry> Entries, IReadOnlyList<LibraryEntry> Breadcrumbs, bool CanRecheck, int RecheckIntervalDays);
 
 /// <summary>
 /// Browses and serves the downloaded files.
@@ -133,8 +135,8 @@ public sealed class LibraryService
             // Never show what we would refuse to serve.
             if (item.LinkTarget is not null) continue;
 
-            // The saved job list lives in the library volume but is not part of the library.
-            if (item.Name == Jobs.JobStore.FolderName && string.Equals(fullPath, _root, PathComparison)) continue;
+            // Hide dotfiles (including .kea-meta.json).
+            if (item.Name.StartsWith('.')) continue;
 
             bool isDirectory = item is DirectoryInfo;
             entries.Add(new LibraryEntry(
@@ -145,13 +147,68 @@ public sealed class LibraryService
                 item.LastWriteTimeUtc));
         }
 
-        // Folders first, then files, each alphabetically — the order people expect in a file list.
+        // Folders first, then files, each in natural order (so "(10)" sorts after "(9)").
         entries = entries
             .OrderByDescending(e => e.IsDirectory)
-            .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(e => e.Name, NaturalComparer.Instance)
             .ToList();
 
-        return new LibraryListing(ToRelative(fullPath), entries, BuildBreadcrumbs(fullPath));
+        string metaFilePath = System.IO.Path.Combine(fullPath, ".kea-meta.json");
+        bool canRecheck = File.Exists(metaFilePath);
+        int recheckIntervalDays = 0;
+        if (canRecheck && TryReadMetaFromPath(metaFilePath, out KeaMeta? m))
+            recheckIntervalDays = m.RecheckIntervalDays;
+        return new LibraryListing(ToRelative(fullPath), entries, BuildBreadcrumbs(fullPath), canRecheck, recheckIntervalDays);
+    }
+
+    /// <summary>Reads the recheck metadata for a folder, if it exists.</summary>
+    public bool TryReadMeta(string? relativePath, [NotNullWhen(true)] out KeaMeta? meta)
+    {
+        meta = null;
+        if (!TryResolve(relativePath, out string? fullPath)) return false;
+        string metaPath = Path.Combine(fullPath, ".kea-meta.json");
+        return TryReadMetaFromPath(metaPath, out meta);
+    }
+
+    private static bool TryReadMetaFromPath(string metaPath, [NotNullWhen(true)] out KeaMeta? meta)
+    {
+        meta = null;
+        if (!File.Exists(metaPath)) return false;
+        try
+        {
+            string json = File.ReadAllText(metaPath);
+            meta = JsonSerializer.Deserialize<KeaMeta>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return meta is not null;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Writes updated meta back to disk. Returns false if the path is invalid.</summary>
+    public bool WriteMetaFile(string? relativePath, KeaMeta meta)
+    {
+        if (!TryResolve(relativePath, out string? fullPath)) return false;
+        if (!Directory.Exists(fullPath)) return false;
+        string metaPath = Path.Combine(fullPath, ".kea-meta.json");
+        try
+        {
+            File.WriteAllText(metaPath, JsonSerializer.Serialize(meta,
+                new JsonSerializerOptions { WriteIndented = true }));
+            return true;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Enumerates all comic folders that have a .kea-meta.json with a non-zero recheck interval.</summary>
+    public IEnumerable<(string RelativePath, KeaMeta Meta)> GetScheduledComics()
+    {
+        if (!Directory.Exists(_root)) yield break;
+        foreach (string dir in Directory.EnumerateDirectories(_root))
+        {
+            string metaPath = Path.Combine(dir, ".kea-meta.json");
+            if (TryReadMetaFromPath(metaPath, out KeaMeta? meta) && meta.RecheckIntervalDays > 0)
+                yield return (Path.GetRelativePath(_root, dir).Replace(Path.DirectorySeparatorChar, '/'), meta);
+        }
     }
 
     /// <summary>Resolves a path that must be an existing file, for download.</summary>
@@ -210,10 +267,90 @@ public sealed class LibraryService
         return trail;
     }
 
+    /// <summary>
+    /// Splits a string into alternating non-digit / digit chunks and compares them so that
+    /// embedded numbers sort numerically rather than lexicographically.
+    /// "(2) foo" &lt; "(10) foo", "ep9" &lt; "ep10", etc.
+    /// </summary>
+    private sealed class NaturalComparer : IComparer<string>
+    {
+        public static readonly NaturalComparer Instance = new();
+
+        public int Compare(string? x, string? y)
+        {
+            if (ReferenceEquals(x, y)) return 0;
+            if (x is null) return -1;
+            if (y is null) return 1;
+
+            var cx = Chunks(x);
+            var cy = Chunks(y);
+            int len = Math.Min(cx.Count, cy.Count);
+
+            for (int i = 0; i < len; i++)
+            {
+                int cmp;
+                bool xNum = long.TryParse(cx[i], out long xVal);
+                bool yNum = long.TryParse(cy[i], out long yVal);
+
+                if (xNum && yNum)
+                    cmp = xVal.CompareTo(yVal);
+                else
+                    cmp = string.Compare(cx[i], cy[i], StringComparison.OrdinalIgnoreCase);
+
+                if (cmp != 0) return cmp;
+            }
+
+            return cx.Count.CompareTo(cy.Count);
+        }
+
+        private static List<string> Chunks(string s) =>
+            Regex.Split(s, @"(\d+)").Where(c => c.Length > 0).ToList();
+    }
+
     private string ToRelative(string fullPath)
     {
         string relative = Path.GetRelativePath(_root, fullPath);
         return relative == "." ? string.Empty : relative.Replace(Path.DirectorySeparatorChar, '/');
+    }
+
+    /// <summary>Same natural comparer used internally, exposed for the repack endpoint.</summary>
+    public sealed class NaturalFileComparer : IComparer<string>
+    {
+        public static readonly NaturalFileComparer Instance = new();
+        private NaturalFileComparer() { }
+
+        public int Compare(string? x, string? y)
+        {
+            if (ReferenceEquals(x, y)) return 0;
+            if (x is null) return -1;
+            if (y is null) return 1;
+            return NaturalOrder(x, y);
+        }
+
+        internal static int NaturalOrder(string x, string y)
+        {
+            int i = 0, j = 0;
+            while (i < x.Length && j < y.Length)
+            {
+                if (char.IsDigit(x[i]) && char.IsDigit(y[j]))
+                {
+                    int xs = i, ys = j;
+                    while (i < x.Length && char.IsDigit(x[i])) i++;
+                    while (j < y.Length && char.IsDigit(y[j])) j++;
+                    int cmp = (i - xs).CompareTo(j - ys);
+                    if (cmp != 0) return cmp;
+                    cmp = string.Compare(x[xs..i], y[ys..j], StringComparison.Ordinal);
+                    if (cmp != 0) return cmp;
+                }
+                else
+                {
+                    int cmp = char.ToLowerInvariant(x[i]).CompareTo(char.ToLowerInvariant(y[j]));
+                    if (cmp != 0) return cmp;
+                    i++; j++;
+                }
+            }
+            return (x.Length - i).CompareTo(y.Length - j);
+        }
     }
 
     /// <summary>
