@@ -133,6 +133,9 @@ public sealed class LibraryService
             // Never show what we would refuse to serve.
             if (item.LinkTarget is not null) continue;
 
+            // The saved job list lives in the library volume but is not part of the library.
+            if (item.Name == Jobs.JobStore.FolderName && string.Equals(fullPath, _root, PathComparison)) continue;
+
             bool isDirectory = item is DirectoryInfo;
             entries.Add(new LibraryEntry(
                 item.Name,

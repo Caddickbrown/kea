@@ -12,9 +12,9 @@ public sealed record JobEvent(string Type, JobView Job);
 /// Holds the queue, the running jobs and the finished history.
 /// </summary>
 /// <remarks>
-/// State lives in memory only: a restart loses the job list, but never the downloads themselves,
-/// which are already on disk. That keeps the service free of a database for what is a single-user
-/// tool.
+/// The list is kept in memory and mirrored to a file by <see cref="JobStore"/> after every change,
+/// so a restart keeps the history and the errors, and runs again anything that was waiting or
+/// half done. There is still no database: it is a single-user tool.
 /// </remarks>
 public sealed class JobQueue
 {
@@ -22,11 +22,14 @@ public sealed class JobQueue
     private readonly Channel<Guid> _pending;
     private readonly KeaOptions _options;
     private readonly JobEvents _events;
+    private readonly JobStore _store;
+    private DateTimeOffset _lastProgressSave = DateTimeOffset.MinValue;
 
-    public JobQueue(IOptions<KeaOptions> options, JobEvents events)
+    public JobQueue(IOptions<KeaOptions> options, JobEvents events, JobStore store)
     {
         _options = options.Value;
         _events = events;
+        _store = store;
 
         // A bounded channel is the backpressure: submissions are refused rather than piling up.
         _pending = Channel.CreateBounded<Guid>(new BoundedChannelOptions(_options.MaxQueuedJobs)
@@ -35,7 +38,57 @@ public sealed class JobQueue
             SingleReader = false,
             SingleWriter = false,
         });
+
+        Restore();
     }
+
+    /// <summary>Brings back the saved list and queues whatever was unfinished, oldest first.</summary>
+    private void Restore()
+    {
+        string root = Path.GetFullPath(_options.LibraryPath);
+        List<JobRecord> toRun = [];
+
+        foreach (PersistedJob saved in _store.Load().OrderBy(j => j.View.CreatedAt))
+        {
+            if (!SaveFormats.TryParse(saved.Request.Format, out SaveFormat format)) continue;
+
+            List<ToonJob> jobs = [];
+            foreach (string raw in saved.Request.Urls)
+            {
+                if (WebtoonUrl.TryParse(raw, out WebtoonUrl? url, out _))
+                    jobs.Add(new ToonJob(url, saved.Request.Start, saved.Request.End));
+            }
+
+            JobRecord record = JobRecord.Restore(saved, jobs, BuildOptions(saved.Request, format), format, root);
+            _jobs[record.Id] = record;
+
+            if (record.Status == JobStatus.Queued) toRun.Add(record);
+        }
+
+        foreach (JobRecord record in toRun)
+        {
+            if (!_pending.Writer.TryWrite(record.Id)) record.Fail("The queue was full after a restart.");
+        }
+
+        if (toRun.Count > 0) Save();
+    }
+
+    private DownloadOptions BuildOptions(JobRequest request, SaveFormat format) => new()
+    {
+        SavePath = _options.LibraryPath,
+        Format = format,
+        CartoonFolders = request.ComicFolders,
+        ChapterFolders = request.ChapterFolders,
+        MaxParallelDownloads = _options.MaxParallelDownloads,
+        MaxStitchedHeight = _options.MaxStitchedHeight,
+    };
+
+    /// <summary>Writes the current list to disk.</summary>
+    private void Save()
+        => _store.Save(_jobs.Values
+            .OrderBy(j => j.CreatedAt)
+            .Select(j => new PersistedJob(j.Request, j.ToView(_options.LibraryPath)))
+            .ToList());
 
     internal ChannelReader<Guid> Pending => _pending.Reader;
 
@@ -89,17 +142,7 @@ public sealed class JobQueue
                 : "No usable links.");
         }
 
-        DownloadOptions options = new()
-        {
-            SavePath = _options.LibraryPath,
-            Format = format,
-            CartoonFolders = request.ComicFolders,
-            ChapterFolders = request.ChapterFolders,
-            MaxParallelDownloads = _options.MaxParallelDownloads,
-            MaxStitchedHeight = _options.MaxStitchedHeight,
-        };
-
-        JobRecord record = new(jobs, options, format, request.Start, request.End);
+        JobRecord record = new(jobs, BuildOptions(request, format), format, request.Start, request.End, request);
         _jobs[record.Id] = record;
 
         if (!_pending.Writer.TryWrite(record.Id))
@@ -109,6 +152,7 @@ public sealed class JobQueue
         }
 
         Trim();
+        Save();
 
         JobView view = record.ToView(_options.LibraryPath);
         _events.Publish(new JobEvent("created", view));
@@ -143,6 +187,7 @@ public sealed class JobQueue
         if (!_jobs.TryRemove(id, out _)) return false;
 
         record.Cancellation.Dispose();
+        Save();
         _events.Publish(new JobEvent("removed", record.ToView(_options.LibraryPath)));
         return true;
     }
@@ -150,7 +195,23 @@ public sealed class JobQueue
     internal bool TryGetRecord(Guid id, out JobRecord? record) => _jobs.TryGetValue(id, out record);
 
     internal void Publish(string type, JobRecord record)
-        => _events.Publish(new JobEvent(type, record.ToView(_options.LibraryPath)));
+    {
+        _events.Publish(new JobEvent(type, record.ToView(_options.LibraryPath)));
+
+        // Every real change is saved at once; progress ticks only now and then, so a long download
+        // does not rewrite the file for every image.
+        if (type != "progress")
+        {
+            Save();
+            return;
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (now - _lastProgressSave < TimeSpan.FromSeconds(5)) return;
+
+        _lastProgressSave = now;
+        Save();
+    }
 
     /// <summary>Drops the oldest finished jobs once the history grows past its limit.</summary>
     private void Trim()

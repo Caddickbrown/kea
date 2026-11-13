@@ -35,6 +35,7 @@ builder.Services.AddHttpClient("webtoons")
     .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(100));
 
 builder.Services.AddSingleton<JobEvents>();
+builder.Services.AddSingleton<JobStore>();
 builder.Services.AddSingleton<JobQueue>();
 builder.Services.AddSingleton<LibraryService>();
 builder.Services.AddSingleton<AccessControl>();

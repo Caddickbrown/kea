@@ -106,8 +106,9 @@ public sealed class JobRunner : BackgroundService
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            // The server is shutting down; leave the job cancelled rather than failed.
-            record.CancelledByUser();
+            // The server is shutting down. Leave the job as it was, still saved as running: the
+            // next start finds it in the saved list and runs it again.
+            return;
         }
         catch (Exception ex)
         {

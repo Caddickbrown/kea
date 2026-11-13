@@ -7,11 +7,11 @@ WORKDIR /src
 # Restore first, against project files alone, so the layer caches until dependencies change.
 COPY src/Kea.Core/Kea.Core.csproj src/Kea.Core/
 COPY src/Kea.Web/Kea.Web.csproj src/Kea.Web/
-RUN dotnet restore src/Kea.Web/Kea.Web.csproj
+RUN dotnet restore src/Kea.Web/Kea.Web.csproj -p:NuGetAudit=false
 
 COPY src/Kea.Core/ src/Kea.Core/
 COPY src/Kea.Web/ src/Kea.Web/
-RUN dotnet publish src/Kea.Web/Kea.Web.csproj -c Release -o /app --no-restore
+RUN dotnet publish src/Kea.Web/Kea.Web.csproj -c Release -o /app --no-restore -p:NuGetAudit=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app

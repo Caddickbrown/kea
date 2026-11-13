@@ -206,6 +206,39 @@ public sealed class KeaDownloader
         }
     }
 
+    /// <summary>
+    /// Fetches one image, trying again when the request merely timed out or the connection hiccuped.
+    /// </summary>
+    /// <remarks>
+    /// An HttpClient timeout surfaces as a cancellation, which the rest of the downloader treats as
+    /// "the user cancelled" and stops everything. One slow image must not end a whole job, so only a
+    /// real cancellation (the token) is allowed through.
+    /// </remarks>
+    private async Task<(byte[] Bytes, string? ContentType)> GetImageWithRetryAsync(
+        Uri imageUrl, string referer, CancellationToken cancellationToken)
+    {
+        const int attempts = 4;
+
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await _client.GetImageAsync(imageUrl, referer, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (attempt < attempts
+                && !cancellationToken.IsCancellationRequested
+                && (ex is HttpRequestException or TaskCanceledException or IOException))
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2 * attempt), cancellationToken).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Out of attempts and still timing out: report it as a failure, not a cancellation.
+                throw new IOException("Timed out fetching an image after several tries.", ex);
+            }
+        }
+    }
+
     private async Task<string[]> DownloadImagesAsync(
         IReadOnlyList<Uri> imageUrls,
         ChapterRef chapter,
@@ -234,7 +267,7 @@ public sealed class KeaDownloader
                 try
                 {
                     (byte[] bytes, string? contentType) =
-                        await _client.GetImageAsync(imageUrls[index], chapter.Url, ct).ConfigureAwait(false);
+                        await GetImageWithRetryAsync(imageUrls[index], chapter.Url, ct).ConfigureAwait(false);
 
                     string extension = ImageExtension(bytes, contentType, imageUrls[index]);
                     string path = Path.Combine(

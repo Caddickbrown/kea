@@ -70,8 +70,9 @@ internal sealed class JobRecord
     private DateTimeOffset? _finishedAt;
     private string? _error;
 
-    public JobRecord(IReadOnlyList<ToonJob> jobs, DownloadOptions options, SaveFormat format, int start, int? end)
+    public JobRecord(IReadOnlyList<ToonJob> jobs, DownloadOptions options, SaveFormat format, int start, int? end, JobRequest request)
     {
+        Request = request;
         Jobs = jobs;
         Options = options;
         Format = format;
@@ -80,7 +81,10 @@ internal sealed class JobRecord
         Comics = jobs.Select(j => j.Name).ToList();
     }
 
-    public Guid Id { get; } = Guid.NewGuid();
+    public Guid Id { get; private init; } = Guid.NewGuid();
+
+    /// <summary>What was asked for, kept so an interrupted job can be run again after a restart.</summary>
+    public JobRequest Request { get; }
 
     public IReadOnlyList<ToonJob> Jobs { get; }
 
@@ -94,7 +98,7 @@ internal sealed class JobRecord
 
     public IReadOnlyList<string> Comics { get; }
 
-    public DateTimeOffset CreatedAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; private init; } = DateTimeOffset.UtcNow;
 
     public CancellationTokenSource Cancellation { get; } = new();
 
@@ -158,6 +162,43 @@ internal sealed class JobRecord
             _statusText = "cancelled";
             _finishedAt = DateTimeOffset.UtcNow;
         }
+    }
+
+    /// <summary>
+    /// Rebuilds a job from what was saved. Finished jobs come back as history; one that was queued
+    /// or running when the server stopped comes back queued, to be run again.
+    /// </summary>
+    public static JobRecord Restore(PersistedJob saved, IReadOnlyList<ToonJob> jobs, DownloadOptions options, SaveFormat format, string libraryRoot)
+    {
+        JobView v = saved.View;
+        JobRecord record = new(jobs, options, format, v.Start, v.End, saved.Request)
+        {
+            Id = Guid.TryParse(v.Id, out Guid id) ? id : Guid.NewGuid(),
+            CreatedAt = v.CreatedAt,
+        };
+
+        lock (record._gate)
+        {
+            bool interrupted = v.Status is JobStatus.Queued or JobStatus.Running;
+
+            record._status = interrupted ? JobStatus.Queued : v.Status;
+            record._statusText = interrupted ? "queued again after a restart" : v.StatusText;
+            record._progress = interrupted ? 0 : v.Progress;
+            record._startedAt = interrupted ? null : v.StartedAt;
+            record._finishedAt = v.FinishedAt;
+            record._error = v.Error;
+
+            if (!interrupted)
+            {
+                // The view holds library-relative paths; the record holds absolute ones.
+                record._chapters.AddRange(v.Chapters.Select(c => c with
+                {
+                    File = string.IsNullOrEmpty(c.File) ? null : Path.Combine(libraryRoot, c.File),
+                }));
+            }
+        }
+
+        return record;
     }
 
     /// <summary>Takes a consistent snapshot for the API and the event stream.</summary>
