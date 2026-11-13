@@ -31,9 +31,14 @@ kept on the server and browsable from the same page:
 
 ```bash
 docker compose up -d          # then open http://localhost:8080
-# or, without Docker:
+# or, without Docker (build the interface once first; it needs Node 20 or newer):
+(cd src/Kea.Web/client && npm ci && npm run build)
 dotnet run --project src/Kea.Web
 ```
+
+The interface is a Svelte app in `src/Kea.Web/client`. `npm run dev` there serves it with live reload and
+forwards `/api` to a server on port 8080. The job list is saved in the library under `.kea-state/`, so a
+restart keeps the queue and runs anything that was unfinished again.
 
 With no access token set it answers only requests from the machine it runs on, so it cannot be
 exposed by accident. See [docs/WEB.md](docs/WEB.md) for tokens, reverse proxies, systemd and the

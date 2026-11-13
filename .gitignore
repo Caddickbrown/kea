@@ -256,3 +256,7 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+
+# Web UI (Svelte): dependencies and the build that lands in wwwroot
+src/Kea.Web/client/node_modules/
+src/Kea.Web/wwwroot/

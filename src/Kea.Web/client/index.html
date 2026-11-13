@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#161513">
+  <title>Kea</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script>
+    // Set the theme before first paint so there is no flash of the wrong one.
+    try {
+      var s = JSON.parse(localStorage.getItem('kea.theme') || '{}');
+      if (s.mode) document.documentElement.dataset.mode = s.mode;
+      if (s.tint) document.documentElement.dataset.tint = s.tint;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

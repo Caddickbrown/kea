@@ -1,6 +1,8 @@
 # Keep the build context small and never ship build output or downloads into an image.
 **/bin/
 **/obj/
+**/node_modules/
+src/Kea.Web/wwwroot/
 library/
 .git/
 .github/

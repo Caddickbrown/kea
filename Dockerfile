@@ -1,6 +1,14 @@
 # Kea web app. Builds only the web front-end and its core library; the Avalonia
 # desktop app and the original Windows Forms project are not part of the image.
 
+# The web UI is a Svelte app; it is built here and dropped into wwwroot after the .NET publish.
+FROM node:22-alpine AS client
+WORKDIR /client
+COPY src/Kea.Web/client/package.json src/Kea.Web/client/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY src/Kea.Web/client/ ./
+RUN npx vite build --outDir /client-dist --emptyOutDir
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
@@ -12,6 +20,8 @@ RUN dotnet restore src/Kea.Web/Kea.Web.csproj -p:NuGetAudit=false
 COPY src/Kea.Core/ src/Kea.Core/
 COPY src/Kea.Web/ src/Kea.Web/
 RUN dotnet publish src/Kea.Web/Kea.Web.csproj -c Release -o /app --no-restore -p:NuGetAudit=false
+RUN rm -rf /app/wwwroot
+COPY --from=client /client-dist /app/wwwroot
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app

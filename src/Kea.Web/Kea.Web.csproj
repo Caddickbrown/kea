@@ -9,7 +9,7 @@
     <RootNamespace>Kea.Web</RootNamespace>
     <AssemblyName>Kea.Web</AssemblyName>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <!-- Serves the UI from wwwroot; there is no JavaScript build step on purpose. -->
+    <!-- Serves the UI from wwwroot. The Svelte source is in client/; `npm run build` there writes wwwroot, and the Dockerfile does the same. -->
     <UserSecretsId>kea-web</UserSecretsId>
   </PropertyGroup>
 
